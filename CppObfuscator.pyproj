@@ -1,0 +1,91 @@
+<Project DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003" ToolsVersion="4.0">
+  <PropertyGroup>
+    <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
+    <SchemaVersion>2.0</SchemaVersion>
+    <ProjectGuid>61465c1b-d7bb-4879-8e1c-625cbd2411c9</ProjectGuid>
+    <ProjectHome>.</ProjectHome>
+    <StartupFile>tests\test_memory_protect.py</StartupFile>
+    <SearchPath>
+    </SearchPath>
+    <WorkingDirectory>.</WorkingDirectory>
+    <OutputPath>.</OutputPath>
+    <Name>CppObfuscator</Name>
+    <RootNamespace>CppObfuscator</RootNamespace>
+    <TestFramework>Pytest</TestFramework>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)' == 'Debug' ">
+    <DebugSymbols>true</DebugSymbols>
+    <EnableUnmanagedDebugging>false</EnableUnmanagedDebugging>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)' == 'Release' ">
+    <DebugSymbols>true</DebugSymbols>
+    <EnableUnmanagedDebugging>false</EnableUnmanagedDebugging>
+  </PropertyGroup>
+  <ItemGroup>
+    <Compile Include="config.py" />
+    <Compile Include="crypto\aes.py" />
+    <Compile Include="crypto\rc4.py" />
+    <Compile Include="crypto\string_encryptor.py" />
+    <Compile Include="crypto\xor_mask.py" />
+    <Compile Include="crypto\__init__.py" />
+    <Compile Include="main.py" />
+    <Compile Include="obfuscator\api_resolver.py" />
+    <Compile Include="obfuscator\code_transformer.py" />
+    <Compile Include="obfuscator\control_flow.py" />
+    <Compile Include="obfuscator\dll_loader.py" />
+    <Compile Include="obfuscator\jit_compiler.py" />
+    <Compile Include="obfuscator\memory_protect.py" />
+    <Compile Include="obfuscator\opaque_predicates.py" />
+    <Compile Include="obfuscator\polymorph_engine.py" />
+    <Compile Include="obfuscator\syscall_hiding.py" />
+    <Compile Include="obfuscator\__init__.py" />
+    <Compile Include="stringguard\backup_restore.py" />
+    <Compile Include="stringguard\decryptor_generator.py" />
+    <Compile Include="stringguard\injector.py" />
+    <Compile Include="stringguard\solution_manager.py" />
+    <Compile Include="stringguard\string_encoder.py" />
+    <Compile Include="stringguard\string_parser.py" />
+    <Compile Include="stringguard\validator.py" />
+    <Compile Include="stringguard\vcxproj_parser.py" />
+    <Compile Include="stringguard\__init__.py" />
+    <Compile Include="stringguard\__main__.py" />
+    <Compile Include="tests\isolate_test_struct.pack.py" />
+    <Compile Include="tests\isolate_test_syscall_pack.py" />
+    <Compile Include="tests\test_crypto.py" />
+    <Compile Include="tests\test_jit.py" />
+    <Compile Include="tests\test_loader.py" />
+    <Compile Include="tests\test_memory_protect.py" />
+    <Compile Include="tests\test_obfuscator.py" />
+    <Compile Include="tests\test_syscalls.py" />
+    <Compile Include="tests\__init__.py" />
+    <Compile Include="utils\debugger.py" />
+    <Compile Include="utils\disassembler.py" />
+    <Compile Include="utils\encrypt_dll.py" />
+    <Compile Include="utils\logger.py" />
+    <Compile Include="utils\__init__.py" />
+  </ItemGroup>
+  <ItemGroup>
+    <Folder Include="crypto\" />
+    <Folder Include="stringguard\" />
+    <Folder Include="sample\" />
+    <Folder Include="tests\" />
+    <Folder Include="utils\" />
+    <Folder Include="obfuscator\" />
+  </ItemGroup>
+  <ItemGroup>
+    <Content Include="sample\test_dll.cpp" />
+    <Content Include="sample\test_exe.cpp" />
+    <Content Include="sample\test_gui.cpp" />
+    <Content Include="sample\test_input.cpp" />
+    <Content Include="sample\test_input_api.cpp" />
+  </ItemGroup>
+  <Import Project="$(MSBuildExtensionsPath32)\Microsoft\VisualStudio\v$(VisualStudioVersion)\Python Tools\Microsoft.PythonTools.targets" />
+  <!-- Uncomment the CoreCompile target to enable the Build command in
+       Visual Studio and specify your pre- and post-build commands in
+       the BeforeBuild and AfterBuild targets below. -->
+  <!--<Target Name="CoreCompile" />-->
+  <Target Name="BeforeBuild">
+  </Target>
+  <Target Name="AfterBuild">
+  </Target>
+</Project>
