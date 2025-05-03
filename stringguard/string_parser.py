@@ -35,6 +35,11 @@ class StringParser:
         results = []
 
         for i, line in enumerate(lines):
+            if line.strip().startswith("#include"):
+                if self.debug:
+                    print(f"[FILTER] Пропущена директива препроцессора: {line.strip()}")
+                continue
+
             for match in self.pattern_normal.finditer(line):
                 value = match.group(1)
                 if self.should_skip(value):
@@ -56,6 +61,7 @@ class StringParser:
                     "line": i + 1,
                     "column": match.start() + 1
                 })
+
 
         # ⬅️ это сохраняет причины в skipped_strings.txt
         self.log_skipped()
