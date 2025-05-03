@@ -1,52 +1,63 @@
-import re
-from dataclasses import dataclass
+﻿import re
+import os
 from typing import List
+from .filter_engine import get_skip_reason
 
-@dataclass
-class StringEntry:
-    filename: str
-    line: int
-    column: int
-    raw_text: str
-    type: str  # "normal", "wide", "raw", "obf"
-    full_line: str
-    is_excluded: bool
+SKIP_LOG_FILE = "logs/skipped_strings.txt"
 
 class StringParser:
     def __init__(self):
-        self.patterns = [
-            (r'(?<!L)\"(.*?)\"', "normal"),
-            (r'L\"(.*?)\"', "wide"),
-            (r'R"\((.*?)\)"', "raw"),
-            (r'OBF_STR\((.*?)\)', "obf")
-        ]
+        self.pattern_normal = re.compile(r'"((?:[^"\\]|\\.)*?)"')
+        self.pattern_wide = re.compile(r'L"((?:[^"\\]|\\.)*?)"')
+        self.skipped = {}
 
-    def parse_file(self, filepath: str) -> List[dict]:
-        results = []
-        with open(filepath, 'r', encoding='utf-8') as f:
+    def should_skip(self, s: str) -> bool:
+        reason = get_skip_reason(s)
+        if reason:
+            self.skipped[s] = reason
+            try:
+                print(f"[FILTER] Skipped: {repr(s)} -> {reason}")
+            except UnicodeEncodeError:
+                print("[FILTER] Skipped: <unprintable string> ->", reason)
+            return True
+        return False
+
+    def log_skipped(self):
+        os.makedirs(os.path.dirname(SKIP_LOG_FILE), exist_ok=True)
+        with open(SKIP_LOG_FILE, "w", encoding="utf-8") as f:
+            for s, reason in sorted(self.skipped.items()):
+                f.write(f"{s}    # skipped because: {reason}\n")
+
+    def parse_file(self, file_path: str) -> List[dict]:
+        with open(file_path, "r", encoding="utf-8", errors="ignore") as f:
             lines = f.readlines()
 
+        results = []
+
         for i, line in enumerate(lines):
-            line_strip = line.strip()
-            if line_strip.startswith("#include") or line_strip.startswith("//") or line_strip.startswith("/*"):
-                continue
-            for pattern, typ in self.patterns:
-                for match in re.finditer(pattern, line):
-                    entry = {
-                        "filename": filepath,
-                        "line": i + 1,
-                        "column": match.start() + 1,
-                        "value": match.group(1),
-                        "type": typ,
-                        "full_line": line.strip(),
-                        "is_excluded": False
-                    }
-                    results.append(entry)
+            for match in self.pattern_normal.finditer(line):
+                value = match.group(1)
+                if self.should_skip(value):
+                    continue
+                results.append({
+                    "type": "normal",
+                    "value": value,
+                    "line": i + 1,
+                    "column": match.start() + 1
+                })
+
+            for match in self.pattern_wide.finditer(line):
+                value = match.group(1)
+                if self.should_skip(value):
+                    continue
+                results.append({
+                    "type": "wide",
+                    "value": value,
+                    "line": i + 1,
+                    "column": match.start() + 1
+                })
+
+        # ⬅️ это сохраняет причины в skipped_strings.txt
+        self.log_skipped()
         return results
 
-    def parse_files(self, file_list: List[str]) -> List[dict]:
-        all_entries = []
-        for file in file_list:
-            entries = self.parse_file(file)
-            all_entries.extend(entries)
-        return all_entries

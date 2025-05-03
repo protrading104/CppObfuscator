@@ -41,6 +41,7 @@
     <Compile Include="obfuscator\__init__.py" />
     <Compile Include="stringguard\backup_restore.py" />
     <Compile Include="stringguard\decryptor_generator.py" />
+    <Compile Include="stringguard\filter_engine.py" />
     <Compile Include="stringguard\injector.py" />
     <Compile Include="stringguard\solution_manager.py" />
     <Compile Include="stringguard\string_encoder.py" />

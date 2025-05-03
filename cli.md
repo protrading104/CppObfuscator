@@ -1,4 +1,9 @@
 
+
+cd c:\TEMP\CppObfuscator\
+python main.py --obfuscate --project c:\TEMP\FindProcessesWithNamedPipes_OBF\FindProcessesWithNamedPipes\FindProcessesWithNamedPipes.vcxproj
+
+==============================================================
 										#Пайплайн
 
 										✅ STEP 1 — Обфускация исходного C++ кода
