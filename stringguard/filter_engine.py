@@ -21,35 +21,30 @@ def load_filter_rules():
 
 rules_cache = load_filter_rules()
 
-def get_skip_reason(s: str) -> str | None:
-    s = s.strip()
-    if not s:
-        return "empty string"
-    if len(s) <= 2:
-        return "too short"
+def get_skip_reason(value: str) -> str | None:
+    value = value.strip()
 
-    if s in rules_cache["skip_keywords"]:
-        return rules_cache["skip_keywords"][s]
+    # ⛔️ Исключаем технические конструкции
+    if not value or value in {" ", "\n", "\r\n"}:
+        return "Empty or whitespace"
 
-    for marker, reason in rules_cache["skip_exact"].items():
-        if marker in s:
-            return reason
+    if value.startswith("#include") or value.startswith("#define") or value.startswith("#pragma"):
+        return "Preprocessor directive"
 
-    for pattern, reason in rules_cache["regex_patterns"]:
-        if pattern.search(s):  # исправлено!
-            return reason
+    if value.startswith("using namespace"):
+        return "Using namespace statement"
 
-    for pattern, reason in rules_cache["syntax_noise"]:
-        if pattern.search(s):  # исправлено!
-            return reason
+    if any(fmt in value for fmt in ["%s", "%d", "%x", "%p", "%f"]):
+        return "Format string (likely for printf/scanf)"
 
-    if "\\\\PIPE\\" in s:
-        return "visual pipe decoration"
+    # Проверка по YAML-файлу
+    if rules_cache is not None:
+        if "exclude" in rules_cache and isinstance(rules_cache["exclude"], list):
+            for pattern in rules_cache["exclude"]:
+                if pattern in value:
+                    return f"Matched exclude rule: {pattern}"
 
-    visible = [c for c in s if c.isalnum()]
-    if not visible:
-        return "no visible characters"
+    return None  # 🚀 Строка может быть обфусцирована
 
-    return None
 
 
