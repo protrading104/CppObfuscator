@@ -1,27 +1,27 @@
-char* yQfgKysN(const unsigned char* data, int JaQkJgPW) {
-    static char B2jlbWI7[1024];
-    unsigned char PPOcesl8 = 238;
-    for (int TcyBWdmQ = 0; TcyBWdmQ < JaQkJgPW; TcyBWdmQ++) {
-        B2jlbWI7[TcyBWdmQ] = data[TcyBWdmQ] ^ PPOcesl8;
-        PPOcesl8 = (PPOcesl8 + 1) % 256;
+char* ASodQxUi(const unsigned char* data, int ICVqCPRR) {
+    static char tcTEUTNQ[1024];
+    unsigned char fkvbFFGq = 175;
+    for (int dMIzqJGM = 0; dMIzqJGM < ICVqCPRR; dMIzqJGM++) {
+        tcTEUTNQ[dMIzqJGM] = data[dMIzqJGM] ^ fkvbFFGq;
+        fkvbFFGq = (fkvbFFGq + 1) % 256;
     }
-    B2jlbWI7[JaQkJgPW] = '\0';
-    return B2jlbWI7;
+    tcTEUTNQ[ICVqCPRR] = '\0';
+    return tcTEUTNQ;
 };
-wchar_t* kLXxGTYu(const unsigned char* data, int JaQkJgPW) {
-    static wchar_t B2jlbWI7[1024];
-    unsigned char PPOcesl8 = 238;
-    for (int TcyBWdmQ = 0; TcyBWdmQ < JaQkJgPW; TcyBWdmQ++) {
-        B2jlbWI7[TcyBWdmQ] = (wchar_t)(data[TcyBWdmQ] ^ PPOcesl8);
-        PPOcesl8 = (PPOcesl8 + 1) % 256;
+wchar_t* kbJFhDVt(const unsigned char* data, int ICVqCPRR) {
+    static wchar_t tcTEUTNQ[1024];
+    unsigned char fkvbFFGq = 175;
+    for (int dMIzqJGM = 0; dMIzqJGM < ICVqCPRR; dMIzqJGM++) {
+        tcTEUTNQ[dMIzqJGM] = (wchar_t)(data[dMIzqJGM] ^ fkvbFFGq);
+        fkvbFFGq = (fkvbFFGq + 1) % 256;
     }
-    B2jlbWI7[JaQkJgPW] = L'\0';
-    return B2jlbWI7;
+    tcTEUTNQ[ICVqCPRR] = L'\0';
+    return tcTEUTNQ;
 };
-const unsigned char tLf9PKHL[] = {0x9b, 0x9d, 0x8b, 0x9c, 0xdd, 0xdc, 0xc0, 0x8a, 0x82, 0x82};
-const unsigned char aVBXQklE[] = {0xa3, 0x8b, 0x9d, 0x9d, 0x8f, 0x89, 0x8b, 0xac, 0x81, 0x96, 0xaf};
-const unsigned char G0oLTiKc[] = {0xaa, 0xa2, 0xa2, 0xce, 0xa7, 0x80, 0x84, 0x8b, 0x8d, 0x9a, 0x8b, 0x8a, 0xcf};
-const unsigned char cU0it2wK[] = {0xa1, 0x8c, 0x88, 0x9b, 0x9d, 0x8d, 0x8f, 0x9a, 0x81, 0x9c, 0xce, 0xba, 0x8b, 0x9d, 0x9a};
+const unsigned char SvNSL98u[] = {0xda, 0xdc, 0xca, 0xdd, 0x9c, 0x9d, 0x81, 0xcb, 0xc3, 0xc3};
+const unsigned char Gd0trPOI[] = {0xe2, 0xca, 0xdc, 0xdc, 0xce, 0xc8, 0xca, 0xed, 0xc0, 0xd7, 0xee};
+const unsigned char wHPoXo9t[] = {0xeb, 0xe3, 0xe3, 0x8f, 0xe6, 0xc1, 0xc5, 0xca, 0xcc, 0xdb, 0xca, 0xcb, 0x8e};
+const unsigned char WtmvFqCO[] = {0xe0, 0xcd, 0xc9, 0xda, 0xdc, 0xcc, 0xce, 0xdb, 0xc0, 0xdd, 0x8f, 0xfb, 0xca, 0xdc, 0xdb};
 
 #include <stdlib.h>
 
@@ -33,13 +33,13 @@ void* resolve(const char* dll, const char* func) {
     return GetProcAddress(hMod, func);
 }
 
-BOOL WINAPI DllMain(HINSTANCE hinstDLL, DWORD jzdCu1hg, LPVOID lpReserved) {
-    if (jzdCu1hg == DLL_PROCESS_ATTACH) {
-        FARPROC msgBox = (FARPROC)resolve(yQfgKysN(tLf9PKHL, 10), yQfgKysN(aVBXQklE, 11));
+BOOL WINAPI DllMain(HINSTANCE hinstDLL, DWORD b9myXBJz, LPVOID lpReserved) {
+    if (b9myXBJz == DLL_PROCESS_ATTACH) {
+        FARPROC msgBox = (FARPROC)resolve(ASodQxUi(SvNSL98u, 10), ASodQxUi(Gd0trPOI, 11));
         if (msgBox) {
             typedef int (WINAPI* MsgBoxFunc)(HWND, LPCSTR, LPCSTR, UINT);
             MsgBoxFunc MessageBoxA_ptr = (MsgBoxFunc)msgBox;
-            MessageBoxA_ptr(NULL, yQfgKysN(G0oLTiKc, 13), yQfgKysN(cU0it2wK, 15), MB_OK);
+            MessageBoxA_ptr(NULL, ASodQxUi(wHPoXo9t, 13), ASodQxUi(WtmvFqCO, 15), MB_OK);
         }
     }
     return TRUE;

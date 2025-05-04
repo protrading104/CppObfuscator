@@ -30,6 +30,7 @@ class StringEncoder:
                 "encrypted": enc_bytes,
                 "array_decl": array_decl,
                 "replacement": call_expr,
+                "is_function": True,
                 "var_name": var_name,
                 "line": s["line"],
                 "column": s["column"],

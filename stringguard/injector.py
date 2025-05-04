@@ -15,24 +15,28 @@ class Injector:
         for entries in string_map.values():
             for entry in entries:
                 decrypt_arrays.append(entry["array_decl"])
-            line_no = entry.get("line", -1)
-            column = entry.get("column", -1)
-            original = entry.get("original", "")
-            replacement = entry["replacement"]
+                line_no = entry.get("line", -1)
+                column = entry.get("column", -1)
+                original = entry.get("original", "")
+                replacement = entry["replacement"]
+                is_function = entry.get("is_function", False)
+                replacement_code = replacement if is_function else f'"{replacement}"'
 
-            print(f"[DEBUG] Строка для замены: '{original}' -> '{replacement}' @ {line_no}:{column}")
+                print(f"[DEBUG] Строка для замены: '{original}' -> '{replacement_code}' @ {line_no}:{column}")
 
-            if line_no > 0:
-                replacements_by_line.setdefault(line_no - 1, []).append((column, original, replacement))
+                if line_no > 0:
+                    replacements_by_line.setdefault(line_no - 1, []).append((column, original, replacement_code))
+
 
         # Применение замен
         for line_no, replacements in replacements_by_line.items():
             line = original_lines[line_no]
             original_line = line
             for column, original, replacement in sorted(replacements, key=lambda x: -x[0]):
+                replacement_code = replacement if isinstance(replacement, str) else replacement[1]
                 index = line.find(original, column)
                 if index != -1:
-                    line = line[:index] + replacement + line[index + len(original):]
+                    line = line[:index] + replacement_code + line[index + len(original):]
             original_lines[line_no] = line
             if original_line != line:
                 print(f"[DEBUG] Изменена строка {line_no + 1}:")

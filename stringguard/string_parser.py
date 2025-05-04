@@ -6,10 +6,11 @@ from .filter_engine import get_skip_reason
 SKIP_LOG_FILE = "logs/skipped_strings.txt"
 
 class StringParser:
-    def __init__(self):
+    def __init__(self, debug=False):
         self.pattern_normal = re.compile(r'"((?:[^"\\]|\\.)*?)"')
         self.pattern_wide = re.compile(r'L"((?:[^"\\]|\\.)*?)"')
         self.skipped = {}
+        self.debug = debug
 
     def should_skip(self, s: str) -> bool:
         reason = get_skip_reason(s)
