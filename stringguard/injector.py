@@ -1,3 +1,4 @@
+
 import os
 
 class Injector:
@@ -21,21 +22,27 @@ class Injector:
                 replacement = entry["replacement"]
                 is_function = entry.get("is_function", False)
                 replacement_code = replacement if is_function else f'"{replacement}"'
-
+                print(f"[INJECTOR DEBUG] original: {original} | replacement_code: {replacement_code} | is_function: {is_function}")
                 print(f"[DEBUG] Строка для замены: '{original}' -> '{replacement_code}' @ {line_no}:{column}")
 
                 if line_no > 0:
-                    replacements_by_line.setdefault(line_no - 1, []).append((column, original, replacement_code))
+                    replacements_by_line.setdefault(line_no - 1, []).append((column, original, replacement_code, is_function))
 
 
         # Применение замен
         for line_no, replacements in replacements_by_line.items():
             line = original_lines[line_no]
             original_line = line
-            for column, original, replacement in sorted(replacements, key=lambda x: -x[0]):
-                replacement_code = replacement if isinstance(replacement, str) else replacement[1]
+            for column, original, replacement, is_function in sorted(replacements, key=lambda x: -x[0]):
+                replacement_code = replacement
                 index = line.find(original, column)
                 if index != -1:
+                    if is_function:
+                        if "printf(" in line:
+                            replacement_code = f'"%s", {replacement_code}'
+                        elif "std::cout" in line:
+                            replacement_code = f'{replacement_code}'
+                    print(f"[VERIFY] ВСТАВКА: {replacement_code} В СТРОКУ: {line.strip()}")
                     line = line[:index] + replacement_code + line[index + len(original):]
             original_lines[line_no] = line
             if original_line != line:
