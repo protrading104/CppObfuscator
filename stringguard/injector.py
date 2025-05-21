@@ -1,4 +1,3 @@
-
 import os
 
 class Injector:
@@ -28,7 +27,6 @@ class Injector:
                 if line_no > 0:
                     replacements_by_line.setdefault(line_no - 1, []).append((column, original, replacement_code, is_function))
 
-
         # Применение замен
         for line_no, replacements in replacements_by_line.items():
             line = original_lines[line_no]
@@ -38,12 +36,25 @@ class Injector:
                 index = line.find(original, column)
                 if index != -1:
                     if is_function:
+                        if not any(x in line for x in ["printf(", "wprintf(", "std::cout"]):
+                            replacement_code = f'(void){replacement_code};'
                         if "printf(" in line:
+                            if '%s' in original:
+                                original = '%s'
+                            print(f"[DEBUG printf] original уже без кавычек: {repr(original)}")
+                            print(f"[DEBUG FIX] printf original: {repr(original)}")
                             replacement_code = f'"%s", {replacement_code}'
+                        elif "wprintf(" in line:
+                            if '%s' in original:
+                                original = '%s'
+                            print(f"[DEBUG WPRINTF] original уже без кавычек: {repr(original)}")
+                            replacement_code = f'L"%s", {replacement_code}'
                         elif "std::cout" in line:
                             replacement_code = f'{replacement_code}'
                     print(f"[VERIFY] ВСТАВКА: {replacement_code} В СТРОКУ: {line.strip()}")
                     line = line[:index] + replacement_code + line[index + len(original):]
+                    if '""' in line and '%s' in line:
+                        print(f"[WARNING] 🚨 Обнаружены двойные кавычки после вставки в строке: {line.strip()}")
             original_lines[line_no] = line
             if original_line != line:
                 print(f"[DEBUG] Изменена строка {line_no + 1}:")
@@ -65,7 +76,6 @@ class Injector:
                     original_lines.insert(i, injected_code + "\n")
                     break
 
-        # Запись файла
         with open(file_path, "w", encoding="utf-8") as f:
             f.writelines(original_lines)
 

@@ -26,6 +26,12 @@ class StringEncoder:
             array_decl = f"const unsigned char {var_name}[] = {{" + ', '.join(f"0x{b:02x}" for b in enc_bytes) + "};"
             call_expr = f'{name_wide}({var_name}, {len(enc_bytes)})' if is_wide else f'{name_normal}({var_name}, {len(enc_bytes)})'
 
+            if original.startswith('"') and original.endswith('"'):
+                original = original[1:-1]
+            elif original.startswith('L"') and original.endswith('"'):
+                original = original[2:-1]
+            
+            
             entry = {
                 "encrypted": enc_bytes,
                 "array_decl": array_decl,
