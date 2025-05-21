@@ -1,0 +1,25 @@
+version = 1
+
+exclude_patterns = [
+  "crypto/**",
+  "obfuscator/**",
+  "output/**",
+  "rules/**",
+  "sample/**",
+  "test_payloads/**",
+  "tests/**",
+  "utils/**",
+  ".gitattributes",
+  ".gitignore",
+  "CppObfuscator.pyproj",
+  "CppObfuscator.sln",
+  "CppObfuscator.zip",
+  "cli.md",
+  "config.py"
+]
+
+[[analyzers]]
+name = "python"
+
+  [analyzers.meta]
+  runtime_version = "3.x.x"
