@@ -1,4 +1,6 @@
 regex_patterns:
+- - ^L".*?"$
+  - exclude wide strings from obfuscation
 - - \\\\PIPE\\
   - named pipe visual marker
 - - ^\s*[│├─\s]+\\\\PIPE\\

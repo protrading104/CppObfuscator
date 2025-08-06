@@ -1,4 +1,5 @@
 import os
+import re
 
 class Injector:
     def __init__(self, inline=True):
@@ -16,52 +17,32 @@ class Injector:
             for entry in entries:
                 decrypt_arrays.append(entry["array_decl"])
                 line_no = entry.get("line", -1)
-                column = entry.get("column", -1)
                 original = entry.get("original", "")
                 replacement = entry["replacement"]
                 is_function = entry.get("is_function", False)
-                replacement_code = replacement if is_function else f'"{replacement}"'
-                print(f"[INJECTOR DEBUG] original: {original} | replacement_code: {replacement_code} | is_function: {is_function}")
-                print(f"[DEBUG] Строка для замены: '{original}' -> '{replacement_code}' @ {line_no}:{column}")
+                replacement_code = replacement
 
+                if is_function:
+                    line_text = original_lines[line_no - 1] if 0 <= line_no - 1 < len(original_lines) else ""
+                    if "printf(" in line_text or "wprintf(" in line_text:
+                        prefix = 'L' if 'wprintf(' in line_text else ''
+                        format_str = f'{prefix}"%s"'
+                        original_lines[line_no - 1] = re.sub(r'(L?)"[^"]*"', f'{format_str}, {replacement}', line_text, count=1)
+                        print(f"[REWRITE] Строка {line_no} заменена на: {original_lines[line_no - 1].strip()}")
+                        continue
+
+                # fallback обычная замена по original
                 if line_no > 0:
-                    replacements_by_line.setdefault(line_no - 1, []).append((column, original, replacement_code, is_function))
+                    replacements_by_line.setdefault(line_no - 1, []).append((original, replacement_code))
 
-        # Применение замен
         for line_no, replacements in replacements_by_line.items():
             line = original_lines[line_no]
-            original_line = line
-            for column, original, replacement, is_function in sorted(replacements, key=lambda x: -x[0]):
-                replacement_code = replacement
-                index = line.find(original, column)
+            for original, replacement in sorted(replacements, key=lambda x: -line.find(x[0])):
+                index = line.find(original)
                 if index != -1:
-                    if is_function:
-                        if not any(x in line for x in ["printf(", "wprintf(", "std::cout"]):
-                            replacement_code = f'(void){replacement_code};'
-                        if "printf(" in line:
-                            if '%s' in original:
-                                original = '%s'
-                            print(f"[DEBUG printf] original уже без кавычек: {repr(original)}")
-                            print(f"[DEBUG FIX] printf original: {repr(original)}")
-                            replacement_code = f'"%s", {replacement_code}'
-                        elif "wprintf(" in line:
-                            if '%s' in original:
-                                original = '%s'
-                            print(f"[DEBUG WPRINTF] original уже без кавычек: {repr(original)}")
-                            replacement_code = f'L"%s", {replacement_code}'
-                        elif "std::cout" in line:
-                            replacement_code = f'{replacement_code}'
-                    print(f"[VERIFY] ВСТАВКА: {replacement_code} В СТРОКУ: {line.strip()}")
-                    line = line[:index] + replacement_code + line[index + len(original):]
-                    if '""' in line and '%s' in line:
-                        print(f"[WARNING] 🚨 Обнаружены двойные кавычки после вставки в строке: {line.strip()}")
+                    line = line[:index] + replacement + line[index + len(original):]
             original_lines[line_no] = line
-            if original_line != line:
-                print(f"[DEBUG] Изменена строка {line_no + 1}:")
-                print(f"  ДО: {original_line.strip()}")
-                print(f"  ПОСЛЕ: {line.strip()}")
 
-        # Подготовка вставки
         injected_code = ""
         if self.inline:
             injected_code += "\n// ====== DECRYPT FUNCTIONS ======\n"

