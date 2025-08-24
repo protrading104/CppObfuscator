@@ -21,7 +21,7 @@ use obfstr::obfstr;
 /// Логирование ключевых событий для диагностики
 macro_rules! log_info {
     ($($arg:tt)*) => {
-        println!("[EDR][INFO] {}", format!($($arg)*));
+        $crate::log!("[EDR][INFO] {}", format!($($arg)*));
     };
 }
 

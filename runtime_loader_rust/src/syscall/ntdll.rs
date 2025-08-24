@@ -2,6 +2,7 @@ use std::ffi::CString;
 use winapi::um::libloaderapi::{GetModuleHandleA, GetProcAddress};
 use winapi::shared::minwindef::HMODULE;
 use obfstr::obfstr;
+use crate::log;
 
 /// Структура для хранения номеров системных вызовов
 #[derive(Debug, Clone)]
@@ -26,7 +27,7 @@ impl SyscallNumbers {
             return Err("Failed to get ntdll handle".to_string());
         }
 
-        println!("[DEBUG] Successfully got ntdll handle: {:p}", ntdll);
+        log!("[DEBUG] Successfully got ntdll handle: {:p}", ntdll);
 
         Ok(SyscallNumbers {
             nt_allocate_virtual_memory: extract_syscall_number(ntdll, obfstr!("NtAllocateVirtualMemory"))?,
@@ -44,17 +45,17 @@ impl SyscallNumbers {
 
     /// Выводит все найденные syscall numbers для диагностики
     pub fn print_syscalls(&self) {
-        println!("[INFO] Extracted Syscall Numbers:");
-        println!("  NtAllocateVirtualMemory: 0x{:02X}", self.nt_allocate_virtual_memory);
-        println!("  NtProtectVirtualMemory:  0x{:02X}", self.nt_protect_virtual_memory);
-        println!("  NtWriteVirtualMemory:    0x{:02X}", self.nt_write_virtual_memory);
-        println!("  NtReadVirtualMemory:     0x{:02X}", self.nt_read_virtual_memory);
-        println!("  NtCreateThread:          0x{:02X}", self.nt_create_thread);
-        println!("  NtResumeThread:          0x{:02X}", self.nt_resume_thread);
-        println!("  NtSuspendThread:         0x{:02X}", self.nt_suspend_thread);
-        println!("  NtTerminateThread:       0x{:02X}", self.nt_terminate_thread);
-        println!("  NtQueryInformationProcess: 0x{:02X}", self.nt_query_information_process);
-        println!("  NtSetInformationThread:  0x{:02X}", self.nt_set_information_thread);
+        log!("[INFO] Extracted Syscall Numbers:");
+        log!("  NtAllocateVirtualMemory: 0x{:02X}", self.nt_allocate_virtual_memory);
+        log!("  NtProtectVirtualMemory:  0x{:02X}", self.nt_protect_virtual_memory);
+        log!("  NtWriteVirtualMemory:    0x{:02X}", self.nt_write_virtual_memory);
+        log!("  NtReadVirtualMemory:     0x{:02X}", self.nt_read_virtual_memory);
+        log!("  NtCreateThread:          0x{:02X}", self.nt_create_thread);
+        log!("  NtResumeThread:          0x{:02X}", self.nt_resume_thread);
+        log!("  NtSuspendThread:         0x{:02X}", self.nt_suspend_thread);
+        log!("  NtTerminateThread:       0x{:02X}", self.nt_terminate_thread);
+        log!("  NtQueryInformationProcess: 0x{:02X}", self.nt_query_information_process);
+        log!("  NtSetInformationThread:  0x{:02X}", self.nt_set_information_thread);
     }
 }
 
@@ -68,17 +69,20 @@ fn extract_syscall_number(ntdll: HMODULE, function_name: &str) -> Result<u16, St
         return Err(format!("{}: {}", obfstr!("Failed to get address for"), function_name));
     }
 
-    println!("[DEBUG] {} address: {:p}", function_name, func_addr);
+    log!("[DEBUG] {} address: {:p}", function_name, func_addr);
 
     // Читаем первые 32 байта функции для анализа
     let bytes = unsafe { std::slice::from_raw_parts(func_addr as *const u8, 32) };
     
     // Выводим hex dump для диагностики
-    print!("[DEBUG] {} bytes: ", function_name);
-    for i in 0..std::cmp::min(16, bytes.len()) {
-        print!("{:02X} ", bytes[i]);
+    #[cfg(debug_assertions)]
+    {
+        print!("[DEBUG] {} bytes: ", function_name);
+        for i in 0..std::cmp::min(16, bytes.len()) {
+            print!("{:02X} ", bytes[i]);
+        }
+        log!();
     }
-    println!();
 
     // Паттерн 1: x64 Windows 10/11 - mov r10, rcx; mov eax, imm32; syscall
     // Байты: 4C 8B D1 B8 XX XX 00 00 0F 05
@@ -87,7 +91,7 @@ fn extract_syscall_number(ntdll: HMODULE, function_name: &str) -> Result<u16, St
            bytes[i] == 0x4C && bytes[i + 1] == 0x8B && bytes[i + 2] == 0xD1 &&  // mov r10, rcx
            bytes[i + 3] == 0xB8 {  // mov eax, imm32
             let syscall_num = u16::from_le_bytes([bytes[i + 4], bytes[i + 5]]);
-            println!("[DEBUG] {} syscall number: 0x{:02X} (pattern 1)", function_name, syscall_num);
+            log!("[DEBUG] {} syscall number: 0x{:02X} (pattern 1)", function_name, syscall_num);
             return Ok(syscall_num);
         }
     }
@@ -99,7 +103,7 @@ fn extract_syscall_number(ntdll: HMODULE, function_name: &str) -> Result<u16, St
             let syscall_num = u16::from_le_bytes([bytes[i + 1], bytes[i + 2]]);
             // Проверяем, что следом идет корректный паттерн
             if i + 10 < bytes.len() && bytes[i + 5] == 0xBA {  // mov edx, imm32
-                println!("[DEBUG] {} syscall number: 0x{:02X} (pattern 2)", function_name, syscall_num);
+                log!("[DEBUG] {} syscall number: 0x{:02X} (pattern 2)", function_name, syscall_num);
                 return Ok(syscall_num);
             }
         }
@@ -117,7 +121,7 @@ fn extract_syscall_number(ntdll: HMODULE, function_name: &str) -> Result<u16, St
             // Проверяем наличие syscall инструкции дальше в коде
             for j in (i + 6)..(i + 20) {
                 if j + 1 < bytes.len() && bytes[j] == 0x0F && bytes[j + 1] == 0x05 {  // syscall
-                    println!("[DEBUG] {} syscall number: 0x{:02X} (pattern 3)", function_name, syscall_num);
+                    log!("[DEBUG] {} syscall number: 0x{:02X} (pattern 3)", function_name, syscall_num);
                     return Ok(syscall_num);
                 }
             }
@@ -178,14 +182,14 @@ mod tests {
     #[test]
     fn test_indirect_syscall_support() {
         let supported = is_indirect_syscall_supported();
-        println!("Indirect syscalls supported: {}", supported);
+        log!("Indirect syscalls supported: {}", supported);
         assert!(supported, "Indirect syscalls should be supported on this system");
     }
 
     #[test]
     fn test_windows_version() {
         let version = get_windows_version();
-        println!("Windows version: {}", version);
+        log!("Windows version: {}", version);
         assert!(!version.is_empty());
     }
 }
