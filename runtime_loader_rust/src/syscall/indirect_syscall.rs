@@ -1,5 +1,6 @@
 use crate::syscall::SyscallNumbers;
 use winapi::shared::ntdef::{NTSTATUS, HANDLE, PVOID, ULONG};
+use crate::log;
 
 
 /// Структура для работы с indirect syscalls
@@ -172,12 +173,12 @@ mod tests {
             )
         };
 
-        println!("{}: 0x{:08X}", obfstr!("Syscall result"), status);
-        println!("{}: {:p}", obfstr!("Allocated address"), base_addr);
+        log!("{}: 0x{:08X}", obfstr!("Syscall result"), status);
+        log!("{}: {:p}", obfstr!("Allocated address"), base_addr);
 
         if status == 0 {
             assert!(!base_addr.is_null(), obfstr!("Address should not be null"));
-            println!("{}", obfstr!("SUCCESS: Indirect syscall works!"));
+            log!("{}", obfstr!("SUCCESS: Indirect syscall works!"));
         }
     }
 }

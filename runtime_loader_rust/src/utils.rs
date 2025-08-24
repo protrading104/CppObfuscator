@@ -10,6 +10,12 @@ pub fn read_file(file_path: &str) -> io::Result<Vec<u8>> {
     Ok(buffer)
 }
 
-pub fn log(msg: &str) {
-    println!("[*] {}", msg);
+#[macro_export]
+macro_rules! log {
+    ($($arg:tt)*) => {
+        #[cfg(debug_assertions)]
+        {
+            println!($($arg)*);
+        }
+    };
 }

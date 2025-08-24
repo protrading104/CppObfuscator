@@ -2,6 +2,7 @@
 use std::sync::{Arc, Mutex};
 use winapi::um::memoryapi::VirtualProtect;  // ← ДОБАВЛЕН импорт
 use winapi::um::winnt::{PAGE_READWRITE, PAGE_EXECUTE_READ, PAGE_EXECUTE_READWRITE}; // ← ДОБАВЛЕНЫ константы
+use crate::log;
 
 /// Структура для управления зашифрованными регионами памяти
 pub struct EncryptedMemoryRegion {
@@ -93,7 +94,7 @@ impl EncryptedMemoryRegion {
         if !self.encrypted && self.is_valid_memory_region() {
             // НОВОЕ: Изменяем protection перед XOR
             if let Err(e) = self.change_protection_to_rw() {
-                println!("[ERROR] Failed to change protection for encryption: {}", e);
+                log!("[ERROR] Failed to change protection for encryption: {}", e);
                 return;
             }
             
@@ -114,7 +115,7 @@ impl EncryptedMemoryRegion {
             self.encrypted = true;
             
             // ВАЖНО: НЕ восстанавливаем protection сразу - оставляем RW для decrypt
-            println!("[DEBUG] Memory region encrypted successfully");
+            log!("[DEBUG] Memory region encrypted successfully");
         }
     }
     
@@ -141,10 +142,10 @@ impl EncryptedMemoryRegion {
             
             // НОВОЕ: Восстанавливаем исходную protection после decrypt
             if let Err(e) = self.restore_original_protection() {
-                println!("[ERROR] Failed to restore protection after decryption: {}", e);
+                log!("[ERROR] Failed to restore protection after decryption: {}", e);
             }
             
-            println!("[DEBUG] Memory region decrypted and protection restored");
+            log!("[DEBUG] Memory region decrypted and protection restored");
         }
     }
     
@@ -202,7 +203,7 @@ impl MemoryStealthManager {
         let region = EncryptedMemoryRegion::new(base, size);
         if let Ok(mut regions) = self.encrypted_regions.lock() {
             regions.push(region);
-            println!("[DEBUG] Added memory region: base=0x{:X}, size={}", addr, size);
+            log!("[DEBUG] Added memory region: base=0x{:X}, size={}", addr, size);
         }
     }
     
@@ -215,7 +216,7 @@ impl MemoryStealthManager {
                     region.encrypt();
                 }));
             }
-            println!("[DEBUG] All regions encrypted");
+            log!("[DEBUG] All regions encrypted");
         }
     }
     
@@ -228,7 +229,7 @@ impl MemoryStealthManager {
                     region.decrypt();
                 }));
             }
-            println!("[DEBUG] All regions decrypted");
+            log!("[DEBUG] All regions decrypted");
         }
     }
     

